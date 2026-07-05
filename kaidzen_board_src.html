@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кайдзен-доска — Артём</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #15171a;
+    --bg-2: #1b1e22;
+    --card-bg: #1f2227;
+    --card-bg-2: #262a30;
+    --ink: #ecebe7;
+    --muted: #8c9097;
+    --line: #2c3036;
+    --accent-health: #4fae8a;
+    --accent-finance: #d6a93f;
+    --accent-love: #d9748a;
+    --accent-soft-health: #1c2b27;
+    --accent-soft-finance: #2b2417;
+    --accent-soft-love: #2c1f24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 19px;
+    font-weight: 650;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 720px;
+  }
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--line);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-health), var(--accent-finance), var(--accent-love));
+    width: 0%;
+    transition: width .3s ease;
+  }
+  .progress-label {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .auth-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .auth-row button {
+    border: 1px solid var(--line);
+    background: var(--card-bg-2);
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 6px 11px;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .auth-row button:hover { background: #2e333a; }
+  .sync-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #6b6f76;
+    display: inline-block;
+  }
+  .sync-dot.on { background: var(--accent-health); }
+  .sync-dot.off { background: #b15454; }
+  nav.tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 24px 0;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    border: none;
+    background: transparent;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  nav.tabs button.active { color: var(--ink); border-bottom-color: var(--ink); }
+  main { padding: 18px 24px 60px; }
+  .board { display: none; }
+  .board.active { display: block; }
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+    gap: 14px;
+    overflow-x: auto;
+  }
+  @media (max-width: 900px) {
+    .columns { grid-template-columns: repeat(4, 78vw); }
+  }
+  .column {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 140px;
+  }
+  .column h3 {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+    margin: 4px 6px 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 10px 8px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+  .card .txt { margin-bottom: 8px; white-space: pre-wrap; }
+  .card .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .card button {
+    border: 1px solid var(--line);
+    background: var(--card-bg-2);
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 3px 7px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .card button:hover { background: #31363d; }
+  .card button.danger { color: #e08080; border-color: #4a2d2d; margin-left: auto; }
+  .addcard {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .addcard input {
+    flex: 1;
+    font-size: 12.5px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-family: inherit;
+    background: var(--card-bg-2);
+    color: var(--ink);
+  }
+  .addcard input::placeholder { color: var(--muted); }
+  .addcard button {
+    border: none;
+    background: var(--ink);
+    color: #15171a;
+    border-radius: 7px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .legend {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  /* habits tab */
+  .habits-wrap { max-width: 760px; }
+  table.habits { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.habits th, table.habits td {
+    border: 1px solid var(--line);
+    padding: 7px 6px;
+    text-align: center;
+  }
+  table.habits th:first-child, table.habits td:first-child {
+    text-align: left;
+    min-width: 170px;
+  }
+  table.habits th { background: var(--bg-2); font-weight: 600; font-size: 11.5px; color: var(--muted); }
+  td.cell { cursor: pointer; font-size: 15px; user-select: none; color: var(--muted); }
+  td.cell.on { background: var(--accent-soft-health); color: var(--accent-health); }
+  .streak { font-size: 11px; color: var(--muted); }
+  .habit-add { display: flex; gap: 6px; margin: 14px 0; }
+  .habit-add input {
+    flex: 1; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; font-family: inherit;
+    background: var(--card-bg-2); color: var(--ink);
+  }
+  .habit-add button { border: none; background: var(--ink); color: #15171a; border-radius: 7px; padding: 0 12px; cursor: pointer; font-weight: 600; }
+  .vision-box {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .vision-box b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Кайдзен-доска · здоровье / финансы / любовь</h1>
+  <p>Карточка = одна мысль. Доска не про список дел, а про поток: бэклог → этот год → этот месяц → сегодня → сделано. Раз в месяц — пересмотр и честная сверка, без самообмана.</p>
+  <div class="progress-row">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0% карточек закрыто</div>
+  </div>
+  <div class="auth-row" id="authRow">
+    <span class="sync-dot off" id="syncDot"></span>
+    <span id="syncLabel">синхронизация не настроена — данные только на этом устройстве</span>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="health" class="active">Здоровье</button>
+  <button data-tab="finance">Финансы</button>
+  <button data-tab="love">Любовь</button>
+  <button data-tab="habits">Привычки</button>
+</nav>
+
+<main>
+
+  <div class="board active" id="board-health">
+    <div class="vision-box"><b>К 28 годам:</b> энергичный, без больших внутренних переживаний, ЗОЖ, психотерапия / самоанализ при необходимости, относительно здоров.</div>
+    <div class="legend">Перемещай карточку стрелками между колонками. Новую мысль — сразу в бэклог, не держи в голове.</div>
+    <div class="columns" id="cols-health"></div>
+  </div>
+
+  <div class="board" id="board-finance">
+    <div class="vision-box"><b>К 28 годам:</b> доход ≈300 000 ₽/мес (пассивный доход 50 000–150 000, музыка-бизнес, фриланс 50 000–100 000, +возможно новая сфера 50 000–100 000), накопления важнее конкретной квартиры.</div>
+    <div class="legend">Музыка уже разрезана на куски — 6–8 треков в год. Не пересобирай эту карточку заново, просто двигай.</div>
+    <div class="columns" id="cols-finance"></div>
+  </div>
+
+  <div class="board" id="board-love">
+    <div class="vision-box"><b>К 28 годам:</b> искренние отношения (а не штамп ради штампа), английский свободно, мотоцикл, второе гражданство / упрощённые поездки, Азия целиком, тест-драйвы, лучший друг — если случится, а не по плану.</div>
+    <div class="legend">«Лучший друг» и «искренний брак» — не карточки в обычном смысле, их нельзя закрыть дедлайном. Остальное — обычные карточки года.</div>
+    <div class="columns" id="cols-love"></div>
+  </div>
+
+  <div class="board" id="board-habits">
+    <div class="habits-wrap">
+      <div class="vision-box">Рутинные ежедневные вещи — не карточки, а привычки. Кайдзен-час по утрам — тоже сюда. Отмечай день, смотри серию подряд (streak), не борись с собой за пропуск одного дня — это нормальная статистика, а не провал.</div>
+      <table class="habits" id="habitsTable"></table>
+      <div class="habit-add">
+        <input id="newHabit" placeholder="новая привычка, например «20 минут музыки»">
+        <button onclick="addHabit()">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const STORAGE_KEY = 'kaidzen_board_artem_v1';
+
+// === НАСТРОЙКА ОБЛАЧНОЙ СИНХРОНИЗАЦИИ ===
+// Пока пусто — приложение работает локально (на одном устройстве).
+// Как только впишем сюда значения из консоли Firebase, на этой и других
+// страницах появится кнопка «Войти через Google» и данные начнут
+// синхронизироваться между Mac, iPhone и любым другим устройством,
+// где ты вошёл в тот же Google-аккаунт.
+const firebaseConfig = {
+  apiKey: "AIzaSyCh9cfvDd2oA4JyGQGWs7M43YRq1uh2LAQ",
+  authDomain: "kaidzen-artem.firebaseapp.com",
+  projectId: "kaidzen-artem",
+  storageBucket: "kaidzen-artem.firebasestorage.app",
+  messagingSenderId: "347919474279",
+  appId: "1:347919474279:web:303aca7c3fe67d22e2fec2"
+};
+// =========================================
+
+const defaultData = {
+  health: {
+    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cards: [
+      {t:'Психотерапия / самоанализ — держать вариант открытым, не ждать, пока станет совсем плохо', c:0},
+      {t:'Завести еженедельный чек-ин с собой: что тревожит — выгрузить на бумагу, не в голове', c:1},
+      {t:'Спорт / режим сна — перевести в привычки (вкладка «Привычки»), не держать карточкой', c:1},
+      {t:'Раз в квартал — честно спросить себя: что из «беспокоит» решаемо, а что нет', c:0},
+    ]
+  },
+  finance: {
+    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cards: [
+      {t:'Выпустить 6–8 треков за 2026–2027, примерно раз в 1.5 месяца', c:1},
+      {t:'Сниппеты в тикток/рилс — без графика, когда есть настроение, не по принуждению', c:1},
+      {t:'Держать фриланс 50–100к/мес как базу, без иллюзии что потолок сам по себе вырастет', c:1},
+      {t:'100–150к отложить на путешествия летом 2026', c:1},
+      {t:'Одна карточка в месяц: одно предложение по автоматизации одному бизнесу — без обязательства строить систему', c:0},
+      {t:'Накопления → вклад или первый взнос, ориентир — пассивный доход 50к/мес к 27–28', c:0},
+      {t:'Раз в год честно оценивать реальность недвижимости в СПб — не форсировать к произвольной дате', c:0},
+    ]
+  },
+  love: {
+    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cards: [
+      {t:'Английский: словарь → грамматика → разговорная практика — резать как алфавит, не одним пунктом', c:0},
+      {t:'Найти школу / инструктора по вождению мотоцикла', c:0},
+      {t:'Разобраться в вариантах второго гражданства / визовых статусов для безвизовых поездок', c:0},
+      {t:'Поездка по Азии: Таиланд / Вьетнам / Бали', c:1},
+      {t:'Тест-драйв BMW M3 / M2 или Mercedes G63 — аренда на день, не покупка', c:0},
+      {t:'Не форсировать поиск лучшего друга — просто не отказываться от новых знакомств вне «общения по делу»', c:0},
+      {t:'Время вдвоём с Полиной — не карточка, привычка (см. вкладку «Привычки»)', c:1},
+    ]
+  },
+  habits: [
+    {name:'Сон 7–8 часов', log:{}},
+    {name:'Тренировка / спорт', log:{}},
+    {name:'Кайдзен-час: выгрузка мыслей на бумагу', log:{}},
+    {name:'Музыка — хотя бы 20 минут', log:{}},
+    {name:'Без бесцельного скролла перед сном', log:{}},
+  ]
+};
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(defaultData));
+}
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadLocal();
+let cloud = null; // {db, doc, setDoc, uid} когда залогинены и Firebase подключён
+let suppressNextCloudWrite = false;
+
+function save() {
+  saveLocal();
+  renderProgress();
+  if (cloud) {
+    cloud.setDoc(cloud.docRef, data).catch(err => console.warn('cloud save failed', err));
+  }
+}
+
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+function renderBoard(key) {
+  const board = data[key];
+  const wrap = document.getElementById('cols-' + key);
+  wrap.innerHTML = '';
+  board.cols.forEach((colName, ci) => {
+    const col = document.createElement('div');
+    col.className = 'column';
+    const h = document.createElement('h3');
+    const count = board.cards.filter(c => c.c === ci).length;
+    h.innerHTML = '<span>' + colName + '</span><span>' + count + '</span>';
+    col.appendChild(h);
+    board.cards.forEach((card, idx) => {
+      if (card.c !== ci) return;
+      const div = document.createElement('div');
+      div.className = 'card';
+      const txt = document.createElement('div');
+      txt.className = 'txt';
+      txt.textContent = card.t;
+      div.appendChild(txt);
+      const row = document.createElement('div');
+      row.className = 'row';
+      if (ci > 0) {
+        const left = document.createElement('button');
+        left.textContent = '←';
+        left.onclick = () => { card.c--; save(); renderBoard(key); };
+        row.appendChild(left);
+      }
+      if (ci < board.cols.length - 1) {
+        const right = document.createElement('button');
+        right.textContent = '→';
+        right.onclick = () => { card.c++; save(); renderBoard(key); };
+        row.appendChild(right);
+      }
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.className = 'danger';
+      del.onclick = () => { board.cards.splice(idx,1); save(); renderBoard(key); };
+      row.appendChild(del);
+      div.appendChild(row);
+      col.appendChild(div);
+    });
+    const addWrap = document.createElement('div');
+    addWrap.className = 'addcard';
+    const input = document.createElement('input');
+    input.placeholder = 'новая мысль...';
+    const btn = document.createElement('button');
+    btn.textContent = '+';
+    const doAdd = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      board.cards.push({t:v, c:ci});
+      input.value = '';
+      save(); renderBoard(key);
+    };
+    btn.onclick = doAdd;
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+    addWrap.appendChild(input);
+    addWrap.appendChild(btn);
+    col.appendChild(addWrap);
+    wrap.appendChild(col);
+  });
+}
+
+function renderAllBoards() {
+  ['health','finance','love'].forEach(renderBoard);
+}
+
+function renderProgress() {
+  let total = 0, done = 0;
+  ['health','finance','love'].forEach(k => {
+    const b = data[k];
+    total += b.cards.length;
+    done += b.cards.filter(c => c.c === b.cols.length - 1).length;
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '% карточек закрыто (' + done + ' из ' + total + ')';
+}
+
+function lastNDates(n) {
+  const arr = [];
+  const d = new Date();
+  for (let i = n-1; i >= 0; i--) {
+    const dt = new Date(d);
+    dt.setDate(d.getDate() - i);
+    arr.push(dt.toISOString().slice(0,10));
+  }
+  return arr;
+}
+
+function computeStreak(log) {
+  let streak = 0;
+  let d = new Date();
+  while (true) {
+    const iso = d.toISOString().slice(0,10);
+    if (log[iso]) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderHabits() {
+  const dates = lastNDates(7);
+  const table = document.getElementById('habitsTable');
+  let html = '<tr><th>привычка</th>';
+  dates.forEach(d => { html += '<th>' + d.slice(5) + '</th>'; });
+  html += '<th>серия</th></tr>';
+  data.habits.forEach((h, hi) => {
+    html += '<tr><td>' + h.name + ' <button onclick="delHabit(' + hi + ')" style="border:none;background:none;color:#e08080;cursor:pointer;">✕</button></td>';
+    dates.forEach(d => {
+      const on = !!h.log[d];
+      html += '<td class="cell' + (on ? ' on' : '') + '" onclick="toggleHabit(' + hi + ',\'' + d + '\')">' + (on ? '✓' : '') + '</td>';
+    });
+    html += '<td class="streak">' + computeStreak(h.log) + 'д</td></tr>';
+  });
+  table.innerHTML = html;
+}
+
+function toggleHabit(hi, dateIso) {
+  const h = data.habits[hi];
+  h.log[dateIso] = !h.log[dateIso];
+  save();
+  renderHabits();
+}
+function delHabit(hi) { data.habits.splice(hi,1); save(); renderHabits(); }
+function addHabit() {
+  const input = document.getElementById('newHabit');
+  const v = input.value.trim();
+  if (!v) return;
+  data.habits.push({name:v, log:{}});
+  input.value = '';
+  save();
+  renderHabits();
+}
+
+function renderEverything() {
+  renderAllBoards();
+  renderHabits();
+  renderProgress();
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.board').forEach(b => b.classList.remove('active'));
+  document.getElementById('board-' + btn.dataset.tab).classList.add('active');
+});
+
+renderEverything();
+
+// === Облачная синхронизация (Firebase), включается сама,
+// как только в firebaseConfig выше появятся реальные значения. ===
+async function initCloud() {
+  if (!firebaseConfig.apiKey) {
+    setSyncStatus('off', 'синхронизация не настроена — данные только на этом устройстве');
+    return;
+  }
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+    const { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } =
+      await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+    const { getFirestore, doc, setDoc, getDoc, onSnapshot } =
+      await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    const authRow = document.getElementById('authRow');
+
+    function renderAuthUI(user) {
+      authRow.innerHTML = '';
+      const dot = document.createElement('span');
+      dot.className = 'sync-dot';
+      dot.id = 'syncDot';
+      authRow.appendChild(dot);
+      const lbl = document.createElement('span');
+      lbl.id = 'syncLabel';
+      authRow.appendChild(lbl);
+
+      if (user) {
+        lbl.textContent = 'синхронизировано как ' + (user.email || user.displayName);
+        dot.className = 'sync-dot on';
+        const out = document.createElement('button');
+        out.textContent = 'Выйти';
+        out.onclick = () => signOut(auth);
+        authRow.appendChild(out);
+      } else {
+        lbl.textContent = 'не вошёл — данные только на этом устройстве';
+        dot.className = 'sync-dot off';
+        const inBtn = document.createElement('button');
+        inBtn.textContent = 'Войти через Google';
+        inBtn.onclick = () => signInWithPopup(auth, provider).catch(err => alert('Не получилось войти: ' + err.message));
+        authRow.appendChild(inBtn);
+      }
+    }
+
+    renderAuthUI(null);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        cloud = null;
+        renderAuthUI(null);
+        return;
+      }
+      const docRef = doc(db, 'boards', user.uid);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        data = snap.data();
+      } else {
+        await setDoc(docRef, data);
+      }
+      cloud = { setDoc, docRef };
+      renderAuthUI(user);
+      renderEverything();
+
+      onSnapshot(docRef, (snap2) => {
+        if (!snap2.exists()) return;
+        const incoming = snap2.data();
+        if (JSON.stringify(incoming) === JSON.stringify(data)) return;
+        data = incoming;
+        saveLocal();
+        renderEverything();
+      });
+    });
+  } catch (err) {
+    console.warn('Firebase недоступен в этом окружении:', err);
+    setSyncStatus('off', 'облако недоступно сейчас — работаем локально');
+  }
+}
+initCloud();
+</script>
+
+</body>
+</html>

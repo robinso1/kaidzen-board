@@ -1,0 +1,20 @@
+name: weekly-digest
+
+on:
+  schedule:
+    - cron: '0 17 * * 0'   # воскресенье 20:00 по Москве
+  workflow_dispatch: {}
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node digest.js
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}

@@ -268,6 +268,10 @@
     font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
     color: var(--muted); margin: 9px 0 4px;
   }
+  .wave-history { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+  .money-row { display: flex; align-items: center; gap: 10px; }
+  .dir-box input.money { width: 130px; }
+  .money-prev { font-size: 12px; color: var(--muted); }
   /* лежаки */
   .card.stale { border-left: 3px solid var(--accent-finance); }
   .stale-note { font-size: 11px; color: var(--accent-finance); margin: -4px 0 8px; }
@@ -360,6 +364,10 @@ function daysSince(iso) {
   if (!iso) return 0;
   return Math.max(0, Math.floor((Date.now() - new Date(iso)) / 86400000));
 }
+const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+function ym() { return new Date().toISOString().slice(0,7); }
+function prevYm() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
+function ymLabel(s) { return MONTHS_RU[parseInt(s.slice(5),10)-1]; }
 
 // === ВХОД ЧЕРЕЗ GOOGLE (Google Identity Services) ===
 // Сюда впиши Web client ID из Firebase Console:
@@ -381,7 +389,8 @@ const firebaseConfig = {
 const defaultData = {
   wave: {
     items: ['Телеграм-боты на ИИ: продвинуть 3 готовых демо', ''],
-    updated: ''
+    updated: '',
+    history: []
   },
   picture: [
     {dir:'Телеграм-боты на ИИ', goal:'Первые платные заказы (Kwork), потом поток', next:'Продвинуть 3 готовых демо: кворки и отклики'},
@@ -434,7 +443,9 @@ const defaultData = {
 // Старый формат: 5 колонок (с «Сегодня»), без picture/wave, карточки без даты движения.
 function migrate(d) {
   if (!d.wave) d.wave = { items: ['', ''], updated: '' };
+  if (!d.wave.history) d.wave.history = [];
   if (!d.picture) d.picture = JSON.parse(JSON.stringify(defaultData.picture));
+  d.picture.forEach(p => { if (!p.inc) p.inc = {}; });
   ['health','finance','love'].forEach(k => {
     const b = d[k];
     if (!b) { d[k] = JSON.parse(JSON.stringify(defaultData[k])); return; }
@@ -638,6 +649,15 @@ function renderPicture() {
     input.onchange = () => {
       const v = input.value.trim();
       if (v === data.wave.items[i]) return;
+      // смена главного дела = закончилась старая волна, убираем её в историю
+      if (i === 0 && data.wave.items[0] && daysSince(data.wave.updated) >= 1) {
+        data.wave.history.unshift({
+          text: data.wave.items.filter(x => x).join(' + '),
+          days: daysSince(data.wave.updated),
+          to: todayISO()
+        });
+        data.wave.history = data.wave.history.slice(0, 8);
+      }
       data.wave.items[i] = v;
       data.wave.updated = todayISO();
       save();
@@ -645,6 +665,12 @@ function renderPicture() {
     };
     waveWrap.appendChild(input);
   });
+  if (data.wave.history.length) {
+    const h = document.createElement('div');
+    h.className = 'wave-history';
+    h.textContent = 'прошлые волны: ' + data.wave.history.map(w => w.text + ' (' + w.days + ' дн.)').join(' · ');
+    waveWrap.appendChild(h);
+  }
   const hasWave = data.wave.items.some(x => x);
   document.getElementById('waveDays').textContent =
     hasWave && data.wave.updated ? '· держится ' + daysSince(data.wave.updated) + ' дн.' : '';
@@ -671,6 +697,35 @@ function renderPicture() {
     mk('dir-name', '', 'dir', 'направление...');
     mk('', 'Цель', 'goal', 'одна цель...');
     mk('', 'Следующий шаг', 'next', 'один конкретный шаг...');
+
+    const mlab = document.createElement('div');
+    mlab.className = 'dir-label';
+    mlab.textContent = 'Доход за ' + ymLabel(ym()) + ', ₽';
+    box.appendChild(mlab);
+    const mrow = document.createElement('div');
+    mrow.className = 'money-row';
+    const minp = document.createElement('input');
+    minp.className = 'money';
+    minp.type = 'number';
+    minp.placeholder = '0';
+    if (p.inc[ym()] != null) minp.value = p.inc[ym()];
+    minp.onchange = () => {
+      const n = parseInt(minp.value, 10);
+      if (isNaN(n)) delete p.inc[ym()]; else p.inc[ym()] = n;
+      save(); renderPicture();
+    };
+    mrow.appendChild(minp);
+    const pv = p.inc[prevYm()];
+    if (pv != null) {
+      const cur = p.inc[ym()];
+      let arrow = '';
+      if (cur != null) arrow = cur > pv ? ' ↗' : (cur < pv ? ' ↘' : ' →');
+      const sp = document.createElement('span');
+      sp.className = 'money-prev';
+      sp.textContent = ymLabel(prevYm()) + ': ' + pv.toLocaleString('ru-RU') + arrow;
+      mrow.appendChild(sp);
+    }
+    box.appendChild(mrow);
     dirs.appendChild(box);
   });
 }

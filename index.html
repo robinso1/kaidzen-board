@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Кайдзен-доска — Артём</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2288%22>改</text></svg>">
 <script src="https://accounts.google.com/gsi/client"></script>
 <style>
   :root {
@@ -230,13 +231,62 @@
     line-height: 1.5;
   }
   .vision-box b { color: var(--ink); }
+  /* картина */
+  .wave-box {
+    background: var(--card-bg);
+    border: 1px solid #4a3f1d;
+    border-left: 3px solid var(--accent-finance);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 0 0 16px;
+  }
+  .wave-head { font-size: 14.5px; font-weight: 650; margin-bottom: 2px; }
+  .wave-days { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .wave-hint { font-size: 12px; color: var(--muted); margin: 2px 0 10px; }
+  .wave-input {
+    display: block; width: 100%; margin-bottom: 8px;
+    font-size: 14px; padding: 9px 11px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card-bg-2); color: var(--ink); font-family: inherit;
+  }
+  .wave-input::placeholder { color: var(--muted); }
+  .dir-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .dir-grid { grid-template-columns: 1fr; } }
+  .dir-box {
+    background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .dir-box input {
+    display: block; width: 100%;
+    border: 1px solid var(--line); border-radius: 7px;
+    background: var(--card-bg-2); color: var(--ink);
+    font-family: inherit; font-size: 13px; padding: 7px 9px;
+  }
+  .dir-box input::placeholder { color: var(--muted); }
+  .dir-box input.dir-name { font-weight: 650; font-size: 14px; }
+  .dir-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); margin: 9px 0 4px;
+  }
+  /* лежаки */
+  .card.stale { border-left: 3px solid var(--accent-finance); }
+  .stale-note { font-size: 11px; color: var(--accent-finance); margin: -4px 0 8px; }
+  .stale-banner {
+    background: var(--accent-soft-finance);
+    border: 1px solid #4a3f1d;
+    color: var(--accent-finance);
+    font-size: 12.5px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin: 0 0 14px;
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Кайдзен-доска · здоровье / финансы / любовь</h1>
-  <p>Карточка = одна мысль. Доска не про список дел, а про поток: бэклог → этот год → этот месяц → сегодня → сделано. Раз в месяц — пересмотр и честная сверка, без самообмана.</p>
+  <p>Карточка = одна мысль. Доска не про список дел, а про поток: бэклог → этот год → этот месяц → сделано. Вкладка «Картина» — чтобы за 10 секунд вспомнить, куда идёшь. Лежаки 30+ дней доска подсветит сама.</p>
   <div class="progress-row">
     <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     <div class="progress-label" id="progressLabel">0% карточек закрыто</div>
@@ -248,7 +298,8 @@
 </header>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="health" class="active">Здоровье</button>
+  <button data-tab="picture" class="active">Картина</button>
+  <button data-tab="health">Здоровье</button>
   <button data-tab="finance">Финансы</button>
   <button data-tab="love">Любовь</button>
   <button data-tab="habits">Привычки</button>
@@ -256,21 +307,34 @@
 
 <main>
 
-  <div class="board active" id="board-health">
+  <div class="board active" id="board-picture">
+    <div class="wave-box">
+      <div class="wave-head">Текущая волна <span class="wave-days" id="waveDays"></span></div>
+      <div class="wave-hint">1-2 дела, на которых ты сейчас. Фокус сменился - просто перепиши, это не провал, это волны.</div>
+      <div id="waveItems"></div>
+    </div>
+    <div class="legend">Вся картина: куда идёшь и какой один следующий шаг. Любое поле правится прямо тут, сохраняется само.</div>
+    <div class="dir-grid" id="pictureDirs"></div>
+  </div>
+
+  <div class="board" id="board-health">
     <div class="vision-box"><b>К 28 годам:</b> энергичный, без больших внутренних переживаний, ЗОЖ, психотерапия / самоанализ при необходимости, относительно здоров.</div>
     <div class="legend">Перемещай карточку стрелками между колонками. Новую мысль — сразу в бэклог, не держи в голове.</div>
+    <div class="stale-banner" id="stale-health" style="display:none"></div>
     <div class="columns" id="cols-health"></div>
   </div>
 
   <div class="board" id="board-finance">
     <div class="vision-box"><b>К 28 годам:</b> доход ≈300 000 ₽/мес (пассивный доход 50 000–150 000, музыка-бизнес, фриланс 50 000–100 000, +возможно новая сфера 50 000–100 000), накопления важнее конкретной квартиры.</div>
     <div class="legend">Музыка уже разрезана на куски — 6–8 треков в год. Не пересобирай эту карточку заново, просто двигай.</div>
+    <div class="stale-banner" id="stale-finance" style="display:none"></div>
     <div class="columns" id="cols-finance"></div>
   </div>
 
   <div class="board" id="board-love">
     <div class="vision-box"><b>К 28 годам:</b> искренние отношения (а не штамп ради штампа), английский свободно, мотоцикл, второе гражданство / упрощённые поездки, Азия целиком, тест-драйвы, лучший друг — если случится, а не по плану.</div>
     <div class="legend">«Лучший друг» и «искренний брак» — не карточки в обычном смысле, их нельзя закрыть дедлайном. Остальное — обычные карточки года.</div>
+    <div class="stale-banner" id="stale-love" style="display:none"></div>
     <div class="columns" id="cols-love"></div>
   </div>
 
@@ -289,6 +353,13 @@
 
 <script>
 const STORAGE_KEY = 'kaidzen_board_artem_v1';
+const STALE_DAYS = 30;
+
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function daysSince(iso) {
+  if (!iso) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(iso)) / 86400000));
+}
 
 // === ВХОД ЧЕРЕЗ GOOGLE (Google Identity Services) ===
 // Сюда впиши Web client ID из Firebase Console:
@@ -308,8 +379,17 @@ const firebaseConfig = {
 // =========================================
 
 const defaultData = {
+  wave: {
+    items: ['Телеграм-боты на ИИ: продвинуть 3 готовых демо', ''],
+    updated: ''
+  },
+  picture: [
+    {dir:'Телеграм-боты на ИИ', goal:'Первые платные заказы (Kwork), потом поток', next:'Продвинуть 3 готовых демо: кворки и отклики'},
+    {dir:'Музыка', goal:'6–8 треков за 2026–2027 + система продажи битов', next:'Следующий трек или сниппет, когда есть настроение'},
+    {dir:'Английский', goal:'Свободный разговорный к 28', next:'Петь песни на английском, разбирать слова из них'},
+  ],
   health: {
-    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cols: ['Бэклог','В этом году','В этом месяце','Сделано'],
     cards: [
       {t:'Психотерапия / самоанализ — держать вариант открытым, не ждать, пока станет совсем плохо', c:0},
       {t:'Завести еженедельный чек-ин с собой: что тревожит — выгрузить на бумагу, не в голове', c:1},
@@ -318,7 +398,7 @@ const defaultData = {
     ]
   },
   finance: {
-    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cols: ['Бэклог','В этом году','В этом месяце','Сделано'],
     cards: [
       {t:'Выпустить 6–8 треков за 2026–2027, примерно раз в 1.5 месяца', c:1},
       {t:'Сниппеты в тикток/рилс — без графика, когда есть настроение, не по принуждению', c:1},
@@ -330,7 +410,7 @@ const defaultData = {
     ]
   },
   love: {
-    cols: ['Бэклог','В этом году','В этом месяце','Сегодня','Сделано'],
+    cols: ['Бэклог','В этом году','В этом месяце','Сделано'],
     cards: [
       {t:'Английский: словарь → грамматика → разговорная практика — резать как алфавит, не одним пунктом', c:0},
       {t:'Найти школу / инструктора по вождению мотоцикла', c:0},
@@ -350,15 +430,33 @@ const defaultData = {
   ]
 };
 
+// Приводит данные любой старой версии к текущему формату.
+// Старый формат: 5 колонок (с «Сегодня»), без picture/wave, карточки без даты движения.
+function migrate(d) {
+  if (!d.wave) d.wave = { items: ['', ''], updated: '' };
+  if (!d.picture) d.picture = JSON.parse(JSON.stringify(defaultData.picture));
+  ['health','finance','love'].forEach(k => {
+    const b = d[k];
+    if (!b) { d[k] = JSON.parse(JSON.stringify(defaultData[k])); return; }
+    if (b.cols.length === 5) {
+      b.cols = ['Бэклог','В этом году','В этом месяце','Сделано'];
+      b.cards.forEach(c => { if (c.c >= 3) c.c--; });
+    }
+    b.cards.forEach(c => { if (!c.m) c.m = todayISO(); });
+  });
+  if (!d.habits) d.habits = [];
+  return d;
+}
+
 function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return migrate(JSON.parse(raw));
   } catch(e) {}
-  return JSON.parse(JSON.stringify(defaultData));
+  return migrate(JSON.parse(JSON.stringify(defaultData)));
 }
 function saveLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
 }
 
 let data = loadLocal();
@@ -384,6 +482,12 @@ function renderBoard(key) {
   const board = data[key];
   const wrap = document.getElementById('cols-' + key);
   wrap.innerHTML = '';
+  const banner = document.getElementById('stale-' + key);
+  if (banner) {
+    const n = board.cards.filter(c => c.c !== board.cols.length - 1 && c.m && daysSince(c.m) >= STALE_DAYS).length;
+    banner.style.display = n ? '' : 'none';
+    if (n) banner.textContent = 'Без движения 30+ дней: ' + n + '. Вопрос к каждой: это даст больше денег или меньше стресса? Если нет - смело ✕.';
+  }
   board.cols.forEach((colName, ci) => {
     const col = document.createElement('div');
     col.className = 'column';
@@ -395,22 +499,30 @@ function renderBoard(key) {
       if (card.c !== ci) return;
       const div = document.createElement('div');
       div.className = 'card';
+      const stale = ci !== board.cols.length - 1 && card.m && daysSince(card.m) >= STALE_DAYS;
+      if (stale) div.className += ' stale';
       const txt = document.createElement('div');
       txt.className = 'txt';
       txt.textContent = card.t;
       div.appendChild(txt);
+      if (stale) {
+        const sn = document.createElement('div');
+        sn.className = 'stale-note';
+        sn.textContent = 'без движения ' + daysSince(card.m) + ' дн.';
+        div.appendChild(sn);
+      }
       const row = document.createElement('div');
       row.className = 'row';
       if (ci > 0) {
         const left = document.createElement('button');
         left.textContent = '←';
-        left.onclick = () => { card.c--; save(); renderBoard(key); };
+        left.onclick = () => { card.c--; card.m = todayISO(); save(); renderBoard(key); };
         row.appendChild(left);
       }
       if (ci < board.cols.length - 1) {
         const right = document.createElement('button');
         right.textContent = '→';
-        right.onclick = () => { card.c++; save(); renderBoard(key); };
+        right.onclick = () => { card.c++; card.m = todayISO(); save(); renderBoard(key); };
         row.appendChild(right);
       }
       const del = document.createElement('button');
@@ -430,7 +542,7 @@ function renderBoard(key) {
     const doAdd = () => {
       const v = input.value.trim();
       if (!v) return;
-      board.cards.push({t:v, c:ci});
+      board.cards.push({t:v, c:ci, m: todayISO()});
       input.value = '';
       save(); renderBoard(key);
     };
@@ -515,7 +627,56 @@ function addHabit() {
   renderHabits();
 }
 
+function renderPicture() {
+  const waveWrap = document.getElementById('waveItems');
+  waveWrap.innerHTML = '';
+  data.wave.items.forEach((txt, i) => {
+    const input = document.createElement('input');
+    input.className = 'wave-input';
+    input.placeholder = i === 0 ? 'главное дело волны...' : 'второе дело, если есть...';
+    input.value = txt;
+    input.onchange = () => {
+      const v = input.value.trim();
+      if (v === data.wave.items[i]) return;
+      data.wave.items[i] = v;
+      data.wave.updated = todayISO();
+      save();
+      renderPicture();
+    };
+    waveWrap.appendChild(input);
+  });
+  const hasWave = data.wave.items.some(x => x);
+  document.getElementById('waveDays').textContent =
+    hasWave && data.wave.updated ? '· держится ' + daysSince(data.wave.updated) + ' дн.' : '';
+
+  const dirs = document.getElementById('pictureDirs');
+  dirs.innerHTML = '';
+  data.picture.forEach((p) => {
+    const box = document.createElement('div');
+    box.className = 'dir-box';
+    const mk = (cls, label, field, ph) => {
+      if (label) {
+        const lab = document.createElement('div');
+        lab.className = 'dir-label';
+        lab.textContent = label;
+        box.appendChild(lab);
+      }
+      const inp = document.createElement('input');
+      inp.className = cls;
+      inp.placeholder = ph;
+      inp.value = p[field] || '';
+      inp.onchange = () => { p[field] = inp.value.trim(); save(); };
+      box.appendChild(inp);
+    };
+    mk('dir-name', '', 'dir', 'направление...');
+    mk('', 'Цель', 'goal', 'одна цель...');
+    mk('', 'Следующий шаг', 'next', 'один конкретный шаг...');
+    dirs.appendChild(box);
+  });
+}
+
 function renderEverything() {
+  renderPicture();
   renderAllBoards();
   renderHabits();
   renderProgress();
@@ -619,17 +780,16 @@ async function initCloud() {
       const docRef = doc(db, 'boards', user.uid);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        data = snap.data();
-      } else {
-        await setDoc(docRef, data);
+        data = migrate(snap.data());
       }
+      await setDoc(docRef, data);
       cloud = { setDoc, docRef };
       renderAuthUI(user);
       renderEverything();
 
       onSnapshot(docRef, (snap2) => {
         if (!snap2.exists()) return;
-        const incoming = snap2.data();
+        const incoming = migrate(snap2.data());
         if (JSON.stringify(incoming) === JSON.stringify(data)) return;
         data = incoming;
         saveLocal();

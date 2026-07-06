@@ -7,6 +7,8 @@
 const crypto = require('crypto');
 
 const PROJECT = 'kaidzen-artem';
+const WEB_API_KEY = 'AIzaSyCh9cfvDd2oA4JyGQGWs7M43YRq1uh2LAQ'; // публичный, из firebaseConfig
+const UID = 'plXnTD3BKhN6ZVpGiwbW8OIC7KG3';                    // Firebase UID Артёма (id документа boards/{uid})
 const BOARD_URL = 'https://robinso1.github.io/kaidzen-board/';
 const STALE_DAYS = 30;
 const BOARDS = { health: 'Здоровье', finance: 'Финансы', love: 'Любовь' };
@@ -16,28 +18,33 @@ function b64url(buf) {
   return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function getAccessToken(sa) {
+// Мятим Firebase custom token на приватном ключе сервис-аккаунта (локальная подпись,
+// прав IAM не требует) и меняем его на обычный ID-токен пользователя UID. Дальше читаем
+// Firestore как этот пользователь — правила boards/{uid} с auth.uid==uid пропускают.
+async function getIdToken(sa) {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const claims = b64url(JSON.stringify({
     iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore',
-    aud: 'https://oauth2.googleapis.com/token',
+    sub: sa.client_email,
+    aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
     iat: now,
     exp: now + 3600,
+    uid: UID,
   }));
   const unsigned = header + '.' + claims;
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(unsigned);
   const sig = signer.sign(sa.private_key).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+  const customToken = unsigned + '.' + sig;
+  const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=' + WEB_API_KEY, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + unsigned + '.' + sig,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: customToken, returnSecureToken: true }),
   });
   const j = await res.json();
-  if (!j.access_token) throw new Error('oauth failed: ' + JSON.stringify(j));
-  return j.access_token;
+  if (!j.idToken) throw new Error('обмен custom token не удался: ' + JSON.stringify(j).slice(0, 300));
+  return j.idToken;
 }
 
 // Firestore REST отдаёт значения в обёртках {stringValue: ...} и т.п.
@@ -135,14 +142,14 @@ async function main() {
     chatId = upd.message.chat.id;
   }
   const sa = JSON.parse(FIREBASE_SA);
-  const token = await getAccessToken(sa);
+  const idToken = await getIdToken(sa);
   const res = await fetch(
-    'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/boards',
-    { headers: { authorization: 'Bearer ' + token } }
+    'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/boards/' + UID,
+    { headers: { authorization: 'Bearer ' + idToken } }
   );
   const j = await res.json();
-  if (!j.documents || !j.documents.length) throw new Error('boards пуст: ' + JSON.stringify(j).slice(0, 300));
-  const doc = decMap(j.documents[0].fields || {});
+  if (!j.fields) throw new Error('документ доски недоступен: ' + JSON.stringify(j).slice(0, 300));
+  const doc = decMap(j.fields);
   const text = buildDigest(doc);
 
   const tg = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/sendMessage', {

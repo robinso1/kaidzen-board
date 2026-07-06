@@ -1,6 +1,8 @@
 // Еженедельный дайджест кайдзен-доски в Telegram.
 // Запускается GitHub Action'ом (см. .github/workflows/digest.yml).
-// Нужны секреты репозитория: FIREBASE_SA (JSON сервис-аккаунта), TG_TOKEN, TG_CHAT_ID.
+// Нужны секреты репозитория: FIREBASE_SA (JSON сервис-аккаунта), TG_TOKEN.
+// TG_CHAT_ID необязателен: если не задан, бот берёт chat id из последнего
+// сообщения, написанного ему (для этого один раз напиши боту /start).
 
 const crypto = require('crypto');
 
@@ -121,9 +123,16 @@ function buildDigest(d) {
 
 async function main() {
   const { FIREBASE_SA, TG_TOKEN, TG_CHAT_ID } = process.env;
-  if (!FIREBASE_SA || !TG_TOKEN || !TG_CHAT_ID) {
-    console.log('Секреты не заданы (FIREBASE_SA / TG_TOKEN / TG_CHAT_ID), выходим тихо.');
+  if (!FIREBASE_SA || !TG_TOKEN) {
+    console.log('Секреты не заданы (FIREBASE_SA / TG_TOKEN), выходим тихо.');
     return;
+  }
+  let chatId = TG_CHAT_ID;
+  if (!chatId) {
+    const u = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/getUpdates').then(r => r.json());
+    const upd = (u.result || []).slice().reverse().find(x => x.message && x.message.chat);
+    if (!upd) throw new Error('chat id не найден: напиши своему боту /start и запусти дайджест ещё раз');
+    chatId = upd.message.chat.id;
   }
   const sa = JSON.parse(FIREBASE_SA);
   const token = await getAccessToken(sa);
@@ -139,7 +148,7 @@ async function main() {
   const tg = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/sendMessage', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ chat_id: TG_CHAT_ID, text, disable_web_page_preview: true }),
+    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
   });
   const tj = await tg.json();
   if (!tj.ok) throw new Error('telegram failed: ' + JSON.stringify(tj));

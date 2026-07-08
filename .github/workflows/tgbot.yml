@@ -1,0 +1,23 @@
+name: tgbot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # каждые 5 минут забирать новые сообщения
+  workflow_dispatch: {}
+
+concurrency:
+  group: tgbot
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tgbot.js
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}

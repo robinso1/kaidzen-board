@@ -277,6 +277,28 @@
     color: var(--muted); margin: 9px 0 4px;
   }
   .wave-history { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+  .inbox-box {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent-health);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 0 0 16px;
+  }
+  .inbox-head { font-size: 14px; font-weight: 650; }
+  .inbox-hint { font-size: 12px; color: var(--muted); margin: 2px 0 10px; }
+  .inbox-item {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card-bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; margin-bottom: 6px;
+    font-size: 13.5px;
+  }
+  .inbox-item .itxt { flex: 1; white-space: pre-wrap; }
+  .inbox-item .idate { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .inbox-item button {
+    border: 1px solid #4a2d2d; background: var(--card-bg-2); color: #e08080;
+    border-radius: 6px; font-size: 12px; padding: 3px 7px; cursor: pointer;
+  }
   .money-row { display: flex; align-items: center; gap: 10px; }
   .dir-box input.money { width: 130px; }
   .money-prev { font-size: 12px; color: var(--muted); }
@@ -324,6 +346,11 @@
       <div class="wave-head">Текущая волна <span class="wave-days" id="waveDays"></span></div>
       <div class="wave-hint">1-2 дела, на которых ты сейчас. Фокус сменился - просто перепиши, это не провал, это волны.</div>
       <div id="waveItems"></div>
+    </div>
+    <div class="inbox-box" id="inboxBox" style="display:none">
+      <div class="inbox-head">Входящие из телеги <span id="inboxCount"></span></div>
+      <div class="inbox-hint">Мысли, что ты скинул боту. Разбери: удали лишнее, важное перенеси мыслью в бэклог нужной вкладки.</div>
+      <div id="inboxItems"></div>
     </div>
     <div class="legend">Вся картина: куда идёшь и какой один следующий шаг. Любое поле правится прямо тут, сохраняется само.</div>
     <div class="dir-grid" id="pictureDirs"></div>
@@ -400,6 +427,7 @@ const defaultData = {
     updated: '',
     history: []
   },
+  inbox: [],
   picture: [
     {dir:'Музыка', why:'Покой и поток + пассив с битов. Якорь, держится годами.', goal:'Каталог битов, который продаётся сам на US', next:'Следующий бит через конвейер, когда есть настроение', inc:{}},
     {dir:'Боты и автоматизация', why:'Путь к лёгким пассивным деньгам, а не к грайнду', goal:'Система, которая приносит без твоего участия', next:'Продвинуть 3 готовых демо: Kwork и отклики', inc:{}},
@@ -453,6 +481,7 @@ const defaultData = {
 function migrate(d) {
   if (!d.wave) d.wave = { items: ['', ''], updated: '' };
   if (!d.wave.history) d.wave.history = [];
+  if (!Array.isArray(d.inbox)) d.inbox = [];
   if (!d.picture) d.picture = JSON.parse(JSON.stringify(defaultData.picture));
   d.picture.forEach(p => { if (!p.inc) p.inc = {}; });
   // Дописать «зачем» тем направлениям, где его ещё нет, по ключевым словам названия.
@@ -754,8 +783,33 @@ function renderPicture() {
   });
 }
 
+function renderInbox() {
+  const box = document.getElementById('inboxBox');
+  const wrap = document.getElementById('inboxItems');
+  if (!box || !wrap) return;
+  const items = data.inbox || [];
+  box.style.display = items.length ? '' : 'none';
+  document.getElementById('inboxCount').textContent = items.length ? '(' + items.length + ')' : '';
+  wrap.innerHTML = '';
+  items.forEach((it, i) => {
+    const row = document.createElement('div');
+    row.className = 'inbox-item';
+    const txt = document.createElement('div');
+    txt.className = 'itxt';
+    txt.textContent = it.text;
+    row.appendChild(txt);
+    if (it.ts) { const d = document.createElement('span'); d.className = 'idate'; d.textContent = it.ts.slice(5); row.appendChild(d); }
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.onclick = () => { data.inbox.splice(i, 1); save(); renderInbox(); };
+    row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+
 function renderEverything() {
   renderPicture();
+  renderInbox();
   renderAllBoards();
   renderHabits();
   renderProgress();

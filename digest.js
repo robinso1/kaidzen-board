@@ -122,6 +122,12 @@ function buildDigest(d) {
     lines.push('💰 ' + MONTHS_RU[parseInt(curYm.slice(5), 10) - 1] + ': ' + moneyParts.join(' · '));
   }
 
+  const inbox = Array.isArray(d.inbox) ? d.inbox.length : 0;
+  if (inbox) {
+    lines.push('');
+    lines.push('📥 Во «Входящих» ' + inbox + ' мыслей, разбери на доске.');
+  }
+
   lines.push('');
   lines.push('📊 Карточек закрыто: ' + done + ' из ' + total + '.');
   lines.push('Доска: ' + BOARD_URL);

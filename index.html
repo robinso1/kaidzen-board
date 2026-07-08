@@ -264,6 +264,14 @@
   }
   .dir-box input::placeholder { color: var(--muted); }
   .dir-box input.dir-name { font-weight: 650; font-size: 14px; }
+  .dir-box input.dir-why {
+    border-color: #4a3f1d;
+    background: var(--accent-soft-finance);
+    color: var(--accent-finance);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .dir-box input.dir-why::placeholder { color: #8a7a45; }
   .dir-label {
     font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
     color: var(--muted); margin: 9px 0 4px;
@@ -393,9 +401,10 @@ const defaultData = {
     history: []
   },
   picture: [
-    {dir:'Телеграм-боты на ИИ', goal:'Первые платные заказы (Kwork), потом поток', next:'Продвинуть 3 готовых демо: кворки и отклики'},
-    {dir:'Музыка', goal:'6–8 треков за 2026–2027 + система продажи битов', next:'Следующий трек или сниппет, когда есть настроение'},
-    {dir:'Английский', goal:'Свободный разговорный к 28', next:'Петь песни на английском, разбирать слова из них'},
+    {dir:'Музыка', why:'Покой и поток + пассив с битов. Якорь, держится годами.', goal:'Каталог битов, который продаётся сам на US', next:'Следующий бит через конвейер, когда есть настроение', inc:{}},
+    {dir:'Боты и автоматизация', why:'Путь к лёгким пассивным деньгам, а не к грайнду', goal:'Система, которая приносит без твоего участия', next:'Продвинуть 3 готовых демо: Kwork и отклики', inc:{}},
+    {dir:'Фриланс', why:'Живые деньги сейчас, база и свобода', goal:'Держать базу 50–100к, не давая ей сожрать всё время', next:'', inc:{}},
+    {dir:'Английский', why:'Свобода: путешествия, другие страны, контент', goal:'Свободный разговорный', next:'Петь песни на английском, разбирать слова из них', inc:{}},
   ],
   health: {
     cols: ['Бэклог','В этом году','В этом месяце','Сделано'],
@@ -446,6 +455,20 @@ function migrate(d) {
   if (!d.wave.history) d.wave.history = [];
   if (!d.picture) d.picture = JSON.parse(JSON.stringify(defaultData.picture));
   d.picture.forEach(p => { if (!p.inc) p.inc = {}; });
+  // Дописать «зачем» тем направлениям, где его ещё нет, по ключевым словам названия.
+  const WHY = [
+    [/музык|бит/i, 'Покой и поток + пассив с битов. Якорь, держится годами.'],
+    [/бот|автомат/i, 'Путь к лёгким пассивным деньгам, а не к грайнду'],
+    [/фриланс/i, 'Живые деньги сейчас, база и свобода'],
+    [/англ/i, 'Свобода: путешествия, другие страны, контент'],
+  ];
+  d.picture.forEach(p => {
+    if (!p.why) { const m = WHY.find(([re]) => re.test(p.dir || '')); p.why = m ? m[1] : ''; }
+  });
+  // Убедиться, что Фриланс есть как отдельное направление.
+  if (!d.picture.some(p => /фриланс/i.test(p.dir || ''))) {
+    d.picture.push({ dir:'Фриланс', why:'Живые деньги сейчас, база и свобода', goal:'Держать базу 50–100к, не давая ей сожрать всё время', next:'', inc:{} });
+  }
   ['health','finance','love'].forEach(k => {
     const b = d[k];
     if (!b) { d[k] = JSON.parse(JSON.stringify(defaultData[k])); return; }
@@ -695,6 +718,7 @@ function renderPicture() {
       box.appendChild(inp);
     };
     mk('dir-name', '', 'dir', 'направление...');
+    mk('dir-why', 'Зачем · что я с этого получу', 'why', 'ответ на «зачем это мне»...');
     mk('', 'Цель', 'goal', 'одна цель...');
     mk('', 'Следующий шаг', 'next', 'один конкретный шаг...');
 
